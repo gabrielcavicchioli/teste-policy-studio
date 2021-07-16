@@ -11,7 +11,7 @@ export default [{
 }, {
   name: 'url',
   field: 'owner',
-  label: 'URL',
+  label: 'Repository Url',
   align: 'left'
 }, {
   name: 'stars',

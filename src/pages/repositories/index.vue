@@ -1,9 +1,9 @@
 <template lang="html">
   <header>
     <div class="row q-col-gutter-md q-pa-sm items-end">
-      <div class="col-4">
+      <div class="col-lg-4 col-md-6 col-sm-8 col-xs-12">
         <q-select v-model="selectedLanguage" :options="languageOptions" dense options-dense
-          emit-value label="Filter by language" @update:model-value="applyFilter" />
+          emit-value label="Filter by language" @update:model-value="updateRouteParams" />
       </div>
     </div>
     <q-separator />
@@ -16,18 +16,19 @@
           <div class="col-12">
             <span class="text-h6">Table config.</span>
           </div>
-          <div class="col-3">
+          <div class="col-lg-4 col-md-6 col-sm-8 col-xs-12">
             <q-item>
               <q-item-section side>Multiplier</q-item-section>
               <q-item-section>
-                <q-slider v-model="multiplier" label :min="0" :max="100"
-                  @change="applyFilter"/>
+                <q-slider v-model="multiplier" :min="0" :max="100" @change="updateRouteParams"/>
               </q-item-section>
+              <q-item-section side>{{ multiplier }}</q-item-section>
             </q-item>
           </div>
         </div>
       </template>
-      <template v-slot:header="props">
+
+      <template #header="props">
         <q-tr :props="props">
           <q-th v-for="col in props.cols" :key="col.name" :props="props">
             {{ col.label }}
@@ -35,7 +36,7 @@
         </q-tr>
       </template>
 
-      <template v-slot:body="props">
+      <template #body="props">
         <q-tr :props="props">
           <q-td key="id" width="20%">
             {{ props.row.id }}
@@ -54,12 +55,13 @@
           </q-td>
 
           <q-td key="computed" width="20%">
-            <span :class="{ 'text-green': props.row.computed > props.row.stargazers_count }">
+            <span :class="{ 'text-green-8 text-weight-bold': props.row.computed > props.row.stargazers_count }">
               {{ props.row.computed || props.row.stargazers_count }}
             </span>
           </q-td>
         </q-tr>
       </template>
+
     </q-table>
   </main>
 </template>
@@ -72,6 +74,7 @@ import service from './service'
 import { useQuasar } from 'quasar'
 import tableColumns from './js/tableColumns'
 import languageOptions from './js/languageOptions'
+
 export default {
   name: 'repositories',
   setup() {
@@ -81,21 +84,19 @@ export default {
     const repositories = ref([])
     const selectedLanguage = ref('javascript')
     const multiplier = ref(0)
-    const tablePagination = {
-      rowsPerPage: 10
-    }
+    const tablePagination = { rowsPerPage: 10 }
 
-    const computedTableColumns = computed(() => {
-      const computedColumn = {
+    const computedTableColumns = [
+      ...tableColumns,
+      {
         name: 'computed',
         field: 'computed',
-        label: 'Computed',
+        label: 'Computed (Stars x Multiplier)',
         align: 'left'
       }
-      return [...tableColumns, computedColumn]
-    })
+    ]
 
-    const updateRouteParams = value => {
+    const updateRouteParams = () => {
       router.replace({
         name: 'Repositories',
         query: {
@@ -106,32 +107,23 @@ export default {
     }
 
     const computedResults = computed(() => {
-      const data = [...repositories.value]
-      const processedData = data.map(row => ({ ...row, computed: row.stargazers_count * multiplier.value }))
+      const processedData = repositories.value.map(row => ({
+        ...row,
+        computed: row.stargazers_count * multiplier.value
+      }))
       return processedData
     })
 
-    const applyFilter = async () => {
-      updateRouteParams()
-    }
+    watch(() => route.query.selectedLanguage, async newValue => {
+      $q.loading.show()
+      repositories.value = await service.find({ language: newValue })
+      $q.loading.hide()
+    }, { immediate: true })
 
-    watch(
-      () => route.query.selectedLanguage,
-      async newValue => {
-        $q.loading.show()
-        repositories.value = await service.find({
-          language: newValue
-        })
-        $q.loading.hide()
-      }, {
-        immediate: true
-      }
-    )
-
-    onMounted(async () => {
+    onMounted(() => {
       multiplier.value = parseInt(route.query.multiplier)
       selectedLanguage.value = route.query.selectedLanguage
-      applyFilter()
+      updateRouteParams()
     })
 
     return {
@@ -139,7 +131,7 @@ export default {
       computedResults,
       languageOptions,
       selectedLanguage,
-      applyFilter,
+      updateRouteParams,
       tablePagination,
       multiplier
     }

@@ -4,9 +4,7 @@ const baseUrl = '/repositories'
 
 const find = async ({ language = 'javascript' } = {}) => {
   try {
-    const params = {
-      q: `language:${language}`
-    }
+    const params = { q: `language:${language}` }
     const response = await http.get(baseUrl, { params })
     const { items } = response.data
     return Promise.resolve(items)
